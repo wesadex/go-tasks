@@ -1,0 +1,192 @@
+package main
+
+import (
+	"fmt"
+	"time"
+
+	// Раскомментируйте для запуска всех примеров:
+	"strings"
+	// "main/cache"
+	// "main/concurrency"
+	// atomicpkg "main/concurrency/atomic"
+	// "main/concurrency/channels"
+	// "main/concurrency/errorgroup"
+	// httpexamples "main/concurrency/http"
+	// "main/concurrency/mutex"
+	"main/concurrency/waitgroup"
+	// "main/concurrency/workerpool"
+	// errorspkg "main/errors"
+	// "main/slices"
+)
+
+func main() {
+
+	startTime := time.Now()
+	defer func() {
+		elapsed := time.Since(startTime)
+		fmt.Printf("Time taken: %s\n", elapsed)
+	}()
+
+	// fmt.Println("╔═══════════════════════════════════════════════════════╗")
+	// fmt.Println("║          GO ПРИМЕРЫ И ДЕМОНСТРАЦИИ                    ║")
+	// fmt.Println("╚═══════════════════════════════════════════════════════╝\n")
+
+	// // ===================================================================
+	// // РАЗДЕЛ 1: СЛАЙСЫ
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 1: СЛАЙСЫ")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// slices.RunAllExamples()
+
+	// // ===================================================================
+	// // РАЗДЕЛ 2: CONCURRENCY - MUTEX
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 2: CONCURRENCY - MUTEX")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// mutex.RunAllDemos()      // Базовые примеры mutex
+	// mutex.RunMutexPatterns() // Паттерны использования
+
+	// ===================================================================
+	// РАЗДЕЛ 3: CONCURRENCY - WAITGROUP
+	// ===================================================================
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println("РАЗДЕЛ 3: CONCURRENCY - WAITGROUP")
+	fmt.Println(strings.Repeat("=", 60))
+
+	waitgroup.DemoWaitGroup()   // Реальный пример с развертыванием нод
+	waitgroup.DemoMyWaitGroup() // Кастомная реализация WaitGroup
+
+	// // ===================================================================
+	// // РАЗДЕЛ 4: CONCURRENCY - ATOMIC OPERATIONS
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 4: CONCURRENCY - ATOMIC OPERATIONS")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// atomicpkg.RunWithoutWaitGroup()
+
+	// // ===================================================================
+	// // РАЗДЕЛ 5: CONCURRENCY - CHANNELS, SELECT
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 5: CONCURRENCY - CHANNELS, SELECT")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// concurrency.RunConcurrencyExplanation()
+
+	// // ===================================================================
+	// // РАЗДЕЛ 5.1: CHANNEL PATTERNS (Fan-In, Fan-Out, Pipeline)
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 5.1: CHANNEL PATTERNS")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// channels.RunChannelPatterns()
+
+	// // ===================================================================
+	// // РАЗДЕЛ 5.2: ДОПОЛНИТЕЛЬНЫЕ ПРИМЕРЫ КАНАЛОВ
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 5.2: ДОПОЛНИТЕЛЬНЫЕ ПРИМЕРЫ КАНАЛОВ")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// channels.RunChannelTasks()
+
+	// ===================================================================
+	// РАЗДЕЛ 5.3: ERRGROUP - ОБРАБОТКА ОШИБОК В ГОРУТИНАХ
+	// ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 5.3: ERRGROUP")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// errorgroup.RunErrGroupExamples()
+
+	// ===================================================================
+	// РАЗДЕЛ 5.4: HTTP - ПАРАЛЛЕЛЬНЫЕ HTTP ЗАПРОСЫ
+	// ===================================================================
+	// fmt.Println("\n=========================================================")
+	// fmt.Println("РАЗДЕЛ 5.4: HTTP - ПАРАЛЛЕЛЬНЫЕ HTTP ЗАПРОСЫ")
+	// fmt.Println("=========================================================")
+
+	// httpexamples.RunHTTPExamples()
+
+	// ===================================================================
+	// РАЗДЕЛ 5.5: WORKER POOL - ПАТТЕРНЫ ПУЛОВ ВОРКЕРОВ
+	// ===================================================================
+	// fmt.Println("\n=========================================================")
+	// fmt.Println("РАЗДЕЛ 5.5: WORKER POOL - ПАТТЕРНЫ ПУЛОВ ВОРКЕРОВ")
+	// fmt.Println("=========================================================")
+
+	// workerpool.RunWorkerPoolExamples()
+
+	// // ===================================================================
+	// // РАЗДЕЛ 5.6: CACHE - АСИНХРОННЫЙ КЕШ С TTL
+	// // ===================================================================
+	// fmt.Println("\n=========================================================")
+	// fmt.Println("РАЗДЕЛ 5.6: CACHE - АСИНХРОННЫЙ КЕШ С TTL")
+	// fmt.Println("=========================================================")
+
+	// cache.RunCacheExamples()
+
+	// ===================================================================
+	// РАЗДЕЛ 5.7: LIMITER - ОГРАНИЧЕНИЕ ПАРАЛЛЕЛИЗМА
+	// ===================================================================
+	// fmt.Println("\n=========================================================")
+	// fmt.Println("РАЗДЕЛ 5.7: LIMITER - ОГРАНИЧЕНИЕ ПАРАЛЛЕЛЬНЫХ ЗАДАЧ")
+	// fmt.Println("=========================================================")
+
+	// limiter.RunLimiterExamples()
+
+	// // ===================================================================
+	// // РАЗДЕЛ 6: ERROR HANDLING
+	// // ===================================================================
+	// fmt.Println("\n" + strings.Repeat("=", 60))
+	// fmt.Println("РАЗДЕЛ 6: ERROR HANDLING")
+	// fmt.Println(strings.Repeat("=", 60))
+
+	// errorspkg.RunErrorExamples()
+
+	// fmt.Println("\n╔═══════════════════════════════════════════════════════╗")
+	// fmt.Println("║            ВСЕ ДЕМОНСТРАЦИИ ЗАВЕРШЕНЫ                 ║")
+	// fmt.Println("╚═══════════════════════════════════════════════════════╝")
+
+	// ===================================================================
+	// ПРИМЕР: Тестирование равномерности случайных чисел
+	// ===================================================================
+	// eg, ectx := errgroup.WithContext(context.Background())
+
+	// for i := 0; i < 5; i++ {
+	// 	val1 := i
+	// 	eg.Go(func() error {
+	// 		r := rand.Intn(10) + 1 // [1..10] чтобы избежать r=0
+	// 		for j := 0; j < r; j++ {
+
+	// 			// Равномерное распределение в диапазоне значений
+	// 			r1 := rand.Intn(5)
+	// 			r2 := rand.Intn(r)
+
+	// 			if val1 == r1 && j == r2 {
+	// 				return fmt.Errorf("ошибка в задаче %d на итерации %d", val1, j)
+	// 			}
+	// 		}
+	// 		time.Sleep(time.Duration(r) * time.Millisecond)
+
+	// 		select {
+	// 		case <-ectx.Done():
+	// 			return ectx.Err()
+	// 		default:
+	// 		}
+
+	// 		fmt.Printf("Задача %d: завершена\n", val1)
+	// 		return nil
+	// 	})
+	// }
+
+	// if err := eg.Wait(); err != nil {
+	// 	fmt.Printf("All tasks completed with error: %v\n", err)
+	// }
+}
