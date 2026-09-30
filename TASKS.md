@@ -620,6 +620,11 @@ func main() {
 }
 ```
 
+## #17 LRU cache
+
+Implement a thread-safe LRU cache in Go with bound capacity.
+
+
 ### The Task
 We need a rate-limited job scheduler that dispatches webhook notifications to external services. Each external service has its own rate limit.
 Part 1 (the only part for now): Implement NewScheduler, Submit, and Shutdown.

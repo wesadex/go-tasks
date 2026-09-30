@@ -241,6 +241,40 @@ func main() {
 
 ```
 
+#### Solution with context
+```go
+var maxGoroutines = 100
+
+func (c client) WithLimiter(ctx context.Context, requests []Request) {
+	tokens := make(chan struct{}, maxGoroutines)
+	wg := &sync.WaitGroup{}
+
+	for range maxGoroutines {
+		tokens <- struct{}{}
+	}
+
+	for _, req := range requests {
+		select {
+		case <-ctx.Done():
+			wg.Wait()
+			return
+		case <-tokens: // might be chosen even with cancelled context but nothing critical - SendRequest will exit with the context
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				defer func() {
+					tokens <- struct{}{}
+				}()
+				if err := c.SendRequest(ctx, req); err != nil {
+					fmt.Println("Error occured: ", err)
+				}
+			}()
+		}
+	}
+	wg.Wait()
+}
+```
+
 ### max RPS limit
 
 #### Simple one
@@ -302,6 +336,89 @@ func (c client) WithLimiter(ctx context.Context, reqs []Request) {
 		}()
 	}
 
+	wg.Wait()
+}
+```
+
+#### Solution with context
+```go
+var maxRPS = 1
+var burst = 10
+
+func (c client) WithLimiter(ctx context.Context, reqs []Request) {
+	ticker := time.NewTicker(time.Second / time.Duration(maxRPS))
+	defer ticker.Stop()
+
+	wg := &sync.WaitGroup{}
+
+	tokens := make(chan struct{}, burst)
+
+	for range burst {
+		tokens <- struct{}{}
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				wg.Wait()
+				return
+			case <-ticker.C:
+				tokens <- struct{}{}
+			}
+		}
+	}()
+
+	for _, req := range reqs {
+		select {
+		case <-tokens:
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := c.SendRequest(ctx, req); err != nil {
+					fmt.Println("Error occured: ", err)
+				}
+			}()
+		case <-ctx.Done():
+			wg.Wait()
+			return
+		}
+	}
+	wg.Wait()
+}
+```
+
+#### Solution with rate-limiter
+
+```go
+import (
+    ...
+	"golang.org/x/time/rate"
+)
+
+var (
+	maxRPS = 1
+	burst  = 10
+)
+
+func (c client) WithLimiter(ctx context.Context, reqs []Request) {
+	limiter := rate.NewLimiter(rate.Limit(maxRPS), burst)
+	var wg sync.WaitGroup
+
+	for _, req := range reqs {
+		// Блокируется, пока не появится токен; возвращает ошибку при отмене ctx
+		if err := limiter.Wait(ctx); err != nil {
+			fmt.Println("limiter:", err)
+			break
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := c.SendRequest(ctx, req); err != nil {
+				fmt.Println("Error occured:", err)
+			}
+		}()
+	}
 	wg.Wait()
 }
 ```
@@ -460,6 +577,102 @@ func main() {
 	wait()
 
 	fmt.Println("Done!")
+}
+```
+
+## #15 In-memory cache
+
+```go
+package main
+
+import (
+	"context"
+	"errors"
+	"sync"
+	"time"
+)
+
+type ICache interface {
+	Get(string) (string, error)
+	Set(string, string)
+	Del(string)
+}
+
+type cacheElement struct {
+	value      string
+	expiration time.Time
+}
+
+type Cache struct {
+	storage map[string]cacheElement
+	ttl     time.Duration
+	mu      *sync.RWMutex
+}
+
+var cleanupFrequency = 10 * time.Second // лучше параметром конструктора, чем хардкодить
+var ErrNotFound = errors.New("item not found")
+
+func NewCache(ctx context.Context, ttl time.Duration) *Cache {
+	c := Cache{
+		storage: make(map[string]cacheElement),
+		ttl:     ttl,
+		mu:      &sync.RWMutex{},
+	}
+	go c.cleanup(ctx)
+	return &c
+}
+
+func (c *Cache) cleanup(ctx context.Context) {
+	ticker := time.NewTicker(cleanupFrequency)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			c.mu.Lock()
+			for key, val := range c.storage {
+				if val.expiration.Before(time.Now()) {
+					delete(c.storage, key)
+				}
+			}
+			c.mu.Unlock()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (c *Cache) Get(key string) (string, error) {
+	c.mu.RLock()
+	val, ok := c.storage[key]
+	c.mu.RUnlock()
+
+	if !ok {
+		return "", ErrNotFound
+	}
+
+	if val.expiration.Before(time.Now()) {
+		return "", ErrNotFound
+	}
+
+	return val.value, nil
+}
+
+func (c *Cache) Set(key, value string) {
+	expDate := time.Now().Add(c.ttl)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.storage[key] = cacheElement{
+
+		value:      value,
+		expiration: expDate,
+	}
+}
+
+func (c *Cache) Del(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.storage, key)
 }
 ```
 
@@ -713,6 +926,118 @@ func main() {
 	}
 }
 ```
+
+## #17 LRU cache
+
+```go
+package lru
+
+import (
+	"errors"
+	"sync"
+)
+
+var ErrNotFound = errors.New("lru: item not found")
+
+type node struct {
+	key        string // needed to delete from the map on eviction
+	val        string
+	prev, next *node
+}
+
+type Cache struct {
+	mu    sync.Mutex
+	cap   int
+	items map[string]*node
+	root  node // root.next is MRU, root.prev is LRU
+}
+
+func New(capacity int) *Cache {
+	if capacity <= 0 {
+		panic("lru: capacity must be positive")
+	}
+
+	c := &Cache{
+		cap:   capacity,
+		items: make(map[string]*node, capacity),
+	}
+
+	c.root.next = &c.root
+	c.root.prev = &c.root
+	return c
+}
+
+// Get returns the value for key and marks it as most recently used.
+func (c *Cache) Get(key string) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	n, ok := c.items[key]
+	if !ok {
+		return "", ErrNotFound
+	}
+	c.moveToFront(n)
+	return n.val, nil
+}
+
+func (c *Cache) Put(key, val string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if n, ok := c.items[key]; ok {
+		n.val = val
+		c.moveToFront(n)
+		return
+	}
+
+	n := &node{key: key, val: val}
+	c.items[key] = n
+	c.pushFront(n)
+
+	if len(c.items) > c.cap {
+		oldest := c.root.prev
+		c.unlink(oldest)
+		delete(c.items, oldest.key)
+	}
+}
+
+func (c *Cache) Delete(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	n, ok := c.items[key]
+	if !ok {
+		return
+	}
+	c.unlink(n)
+	delete(c.items, key)
+}
+
+// list helpers. Caller must hold c.mu
+
+func (c *Cache) pushFront(n *node) {
+	n.prev = &c.root
+	n.next = c.root.next
+	c.root.next.prev = n
+	c.root.next = n
+}
+
+func (c *Cache) unlink(n *node) {
+	n.prev.next = n.next
+	n.next.prev = n.prev
+	n.prev, n.next = nil, nil // help GC
+}
+
+func (c *Cache) moveToFront(n *node) {
+	if c.root.next == n {
+		return
+	}
+	c.unlink(n)
+	c.pushFront(n)
+}
+
+```
+
 
 # Algorhitms
 
