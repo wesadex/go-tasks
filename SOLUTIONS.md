@@ -1,5 +1,33 @@
 # Go tasks solutions
 
+## Оглавление
+
+- [Go](#go-tasks-solutions)
+  - [#8 — Predictable and unpredictable funcs](#8)
+  - [#10 — Fan-in](#10)
+  - [#11 — errgroup](#11)
+  - [#12 — Rate-limiter](#12)
+  - [#13 — Process URLs in parallel](#13)
+  - [#14 — Worker pool](#14---worker-pool-true-pool)
+  - [#15 — In-memory cache](#15-in-memory-cache)
+  - [#16 — Task scheduler](#16-task-scheduler)
+  - [#17 — LRU cache](#17-lru-cache)
+  - [#18 — Simplest mutex](#18-simplest-mutex)
+  - [#19 — strings.Join](#19-stringsjoin)
+- [Algorhitms](#algorhitms)
+  - [Task 1 — Top K frequent elements](#task-1)
+  - [Task 2 — BTree](#task-2---btree)
+  - [Task 3 — Return error without fmt and errors](#task3---return-error-without-fmt-and-errors-usage)
+  - [Task 4 — Encode-decode string](#task4---encode-decode-string)
+  - [Task 5 — Product of array except self](#task5---return-product-of-int-elements-but-current)
+  - [Task 6 — Longest consecutive sequence](#task6---longest-consequitive)
+  - [Task 7 — Is palindrome?](#task7---is-palindrome)
+  - [Task 8 — Find items by sum](#task8---find-items-by-sum)
+  - [Task 9 — 3 Sum](#task9---3-sum)
+  - [Task 10 — Задача с собеседования](#task-10---пиздец-с-собеса)
+- [SQL](#sql)
+  - [1. Футбол и турнирная таблица](#1-футбол-и-турнирная-таблица)
+
 ## #8
 
 ```go
@@ -1149,6 +1177,32 @@ func (m *MyMutex) Unlock() {
 }
 ```
 
+
+## #19 strings.Join
+```go
+func strjoin(elems []string, sep string) string {
+	if len(elems) == 0 {
+		return ""
+	}
+	if len(elems) == 1 {
+		return elems[0]
+	}
+	// Считаем итоговый размер.
+	size := len(sep) * (len(elems) - 1)
+	for _, s := range elems {
+		size += len(s)
+	}
+	// Одна большая аллокация.
+	buf := make([]byte, 0, size)
+	for i, s := range elems {
+		if i > 0 {
+			buf = append(buf, sep...)
+		}
+		buf = append(buf, s...)
+	}
+	return string(buf)
+}
+```
 
 # Algorhitms
 

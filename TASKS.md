@@ -2,6 +2,42 @@
 
 Solutions are [here](SOLUTIONS.md)
 
+## Оглавление
+
+- [Go](#go-tasks)
+  - [#1 — Замыкание в цикле с горутинами](#1)
+  - [#2 — Гонка на счётчике](#2)
+  - [#3 — 10 000 горутин при GOMAXPROCS(1)](#3)
+  - [#4 — Чтение из закрытого канала](#4)
+  - [#5 — range по незакрытому каналу](#5)
+  - [#6 — Буферизованный канал и deadlock](#6)
+  - [#7 — select с чтением и записью](#7)
+  - [#8 — Predictable and unpredictable funcs](#8---predictable-and-unpredictabls-funcs)
+  - [#9 — Channel with channels](#9---channel-with-channels)
+  - [#10 — Fan-in](#10---fanin-gather-info-from-lots-of-channels-process-it-and-send-to-one-channel)
+  - [#11 — errgroup](#11---errgroup)
+  - [#12 — Rate-limiter](#12-rate-limiter)
+  - [#13 — Process URLs in parallel](#13-process-urls-in-parallel)
+  - [#14 — Worker pool](#14---worker-pool-true)
+  - [#15 — In-memory cache](#15---in-memory-cache)
+  - [#16 — Task scheduler](#16-task-scheduler)
+  - [#17 — LRU cache](#17-lru-cache)
+  - [#18 — Simplest mutex](#18-mutex)
+  - [#19 — strings.Join](#19-stringsjoin)
+- [Algorhitms](#algorhitms)
+  - [Task 1 — Top K frequent elements](#task-1)
+  - [Task 2 — BTree](#task-2---btree)
+  - [Task 3 — Return error without fmt and errors](#task-3---return-error-without-fmt-and-errors-usage)
+  - [Task 4 — Encode-decode string](#task4---encode-decode-string)
+  - [Task 5 — Product of array except self](#task5---return-product-of-int-elements-but-current)
+  - [Task 6 — Longest consecutive sequence](#task6---longest-consequitive)
+  - [Task 7 — Is palindrome?](#task7---is-palindrome)
+  - [Task 8 — Find items by sum](#task8---find-items-by-sum)
+  - [Task 9 — 3 Sum](#task9---3-sum)
+  - [Task 10 — Задача с собеседования](#tasks-10---пиздец-с-собеса)
+- [SQL](#sql)
+  - [1. Футбол и турнирная таблица](#1-футбол-и-турнирная-таблица)
+
 ## #1
 
 Что выведет код?
@@ -628,17 +664,13 @@ Implement a thread-safe LRU cache in Go with bound capacity.
 
 Implement simplest mutex
 
+## #19 strings.Join
 
-### The Task
-We need a rate-limited job scheduler that dispatches webhook notifications to external services. Each external service has its own rate limit.
-Part 1 (the only part for now): Implement NewScheduler, Submit, and Shutdown.
-The rules are simple:
+Реализовать аналог `strings.Join`. `sep` — разделитель. Функция должна нормально обрабатывать миллионы строк в слайсе.
 
-Jobs arrive via Submit() and specify a Destination (e.g. "service-a")
-Each destination has a max requests-per-second limit (given in config)
-Jobs to the same destination must not exceed that rate
-Jobs should be processed concurrently across different destinations
-Shutdown must wait for in-flight jobs to finish, but reject new submissions
+```go
+func strjoin(elems []string, sep string) string
+```
 
 # Algorhitms
 
