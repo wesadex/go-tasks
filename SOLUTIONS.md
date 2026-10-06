@@ -53,6 +53,100 @@ func fanin(chans ...<-chan int) <-chan int {
 }
 ```
 
+### Решение без WaitGroup
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+func gen1(ctx context.Context) <-chan int {
+	out := make(chan int)
+
+	go func() {
+		for i := 100; i < 121; i++ {
+			time.Sleep(100 * time.Millisecond)
+			select {
+			case out <- i:
+			case <-ctx.Done():
+				close(out)
+				return
+			}
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+func gen2(ctx context.Context) <-chan int {
+	out := make(chan int)
+
+	go func() {
+		for i := 200; i < 211; i++ {
+			time.Sleep(300 * time.Millisecond)
+			select {
+			case out <- i:
+			case <-ctx.Done():
+				close(out)
+				return
+			}
+		}
+		close(out)
+	}()
+
+	return out
+
+}
+
+func fanin(ctx context.Context, chans ...<-chan int) chan int {
+	out := make(chan int)
+	done := make(chan struct{})
+
+	for _, ch := range chans {
+		go func() {
+			defer func() {
+				done <- struct{}{}
+			}()
+			for v := range ch {
+				select {
+				case <-ctx.Done():
+					return
+				case out <- v:
+				}
+			}
+		}()
+	}
+
+	go func() {
+		for range chans {
+			select {
+			case <-ctx.Done():
+				return
+			case <-done:
+			}
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+func main() {
+	now := time.Now()
+	ctx := context.Background()
+
+	for i := range fanin(ctx, gen1(ctx), gen2(ctx)) {
+		fmt.Println(i)
+	}
+
+	fmt.Println(time.Since(now))
+}
+```
+
 ## #11
 
 ### Решение без errgroup
@@ -940,7 +1034,7 @@ import (
 var ErrNotFound = errors.New("lru: item not found")
 
 type node struct {
-	key        string // needed to delete from the map on eviction
+	key        string
 	val        string
 	prev, next *node
 }
@@ -1036,6 +1130,23 @@ func (c *Cache) moveToFront(n *node) {
 	c.pushFront(n)
 }
 
+```
+
+## #18 Simplest Mutex
+```go
+type MyMutex struct {
+	locked atomic.Uint32
+}
+
+func (m *MyMutex) Lock() {
+	for !m.locked.CompareAndSwap(0, 1) {
+		runtime.Gosched() // share CPU
+	}
+}
+
+func (m *MyMutex) Unlock() {
+	m.locked.Store(0)
+}
 ```
 
 
