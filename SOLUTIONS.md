@@ -1620,3 +1620,49 @@ func (m *MultipleTimers) onFire() {
 	}
 }
 ```
+
+# SQL
+
+## 1. Футбол и турнирная таблица
+
+Команда выиграла хотя бы один матч, забив в нём не меньше двух голов.
+```sql
+SELECT DISTINCT t.id, t.name
+FROM (
+    SELECT m.team1_id,
+           m.team2_id,
+           COUNT(*) FILTER (WHERE g.team_id = m.team1_id) AS g1,
+           COUNT(*) FILTER (WHERE g.team_id = m.team2_id) AS g2
+    FROM matches m
+    JOIN goals g ON g.match_id = m.id
+    GROUP BY m.id, m.team1_id, m.team2_id
+) s
+JOIN teams t ON t.id = CASE
+    WHEN s.g1 > s.g2 THEN s.team1_id
+    WHEN s.g2 > s.g1 THEN s.team2_id
+END
+WHERE GREATEST(s.g1, s.g2) >= 2;
+```
+
+Команда выиграла хоть один матч и забила ≥2 голов хоть в каком-то матче, не обязательно в том же.
+```sql
+WITH score AS (                       -- счёт каждого матча одной строкой
+    SELECT m.id, m.team1_id, m.team2_id,
+           COUNT(g.id) FILTER (WHERE g.team_id = m.team1_id) AS g1,
+           COUNT(g.id) FILTER (WHERE g.team_id = m.team2_id) AS g2
+    FROM matches m
+    LEFT JOIN goals g ON g.match_id = m.id
+    GROUP BY m.id, m.team1_id, m.team2_id
+),
+per_team AS (                         -- разворачиваем: строка на команду в матче
+    SELECT team1_id AS team_id, g1 AS scored, g2 AS conceded FROM score
+    UNION ALL
+    SELECT team2_id, g2, g1 FROM score
+)
+SELECT t.id, t.name
+FROM per_team p
+JOIN teams t ON t.id = p.team_id
+GROUP BY t.id, t.name
+HAVING MAX(CASE WHEN p.scored > p.conceded THEN 1 ELSE 0 END) = 1   -- есть победа
+   AND MAX(p.scored) >= 2;                                          -- есть матч с 2+ голами
+```
