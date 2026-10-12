@@ -14,6 +14,7 @@
   - [#17 — LRU cache](#17-lru-cache)
   - [#18 — Simplest mutex](#18-simplest-mutex)
   - [#19 — strings.Join](#19-stringsjoin)
+  - [#20 — Async worker pool](#20-async-worker-pool)
 - [Algorhitms](#algorhitms)
   - [Task 1 — Top K frequent elements](#task-1)
   - [Task 2 — BTree](#task-2---btree)
@@ -1201,6 +1202,132 @@ func strjoin(elems []string, sep string) string {
 		buf = append(buf, s...)
 	}
 	return string(buf)
+}
+```
+
+## #20 Async worker pool
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"math/rand/v2"
+	"sync"
+	"time"
+)
+
+// Task — единица работы, которую передаёт клиент.
+type Task interface {
+	Do()
+}
+
+type TaskPool interface {
+	Submit(Task) error
+	Close()
+}
+
+var _ TaskPool = (*Pool)(nil)
+
+var (
+	// ErrQueueFull возвращается, если очередь заполнена в момент добавления.
+	ErrQueueFull = errors.New("taskpool: queue is full")
+	// ErrClosed возвращается при попытке добавить задачу после Close.
+	ErrClosed = errors.New("taskpool: pool is closed")
+	// ErrInvalidArgs возвращается при некорректных параметрах конструктора.
+	ErrInvalidArgs = errors.New("taskpool: queueSize must be >= 0 and workers must be > 0")
+)
+
+// Pool обрабатывает задачи не более чем в workers горутинах одновременно,
+// буферизуя до queueSize задач.
+type Pool struct {
+	queue chan Task
+	wg    sync.WaitGroup
+
+	// mu защищает closed и операцию close(queue) от гонки с Submit:
+	// Submit держит RLock на время отправки, Close берёт Lock перед close().
+	// Без этого Submit мог бы отправить в уже закрытый канал -> panic.
+	mu     sync.RWMutex
+	closed bool
+}
+
+// New создаёт пул и сразу запускает workers обработчиков.
+func NewTaskPool(queueSize, workers int) (*Pool, error) {
+	if queueSize < 0 || workers <= 0 {
+		return nil, ErrInvalidArgs
+	}
+
+	p := &Pool{
+		queue: make(chan Task, queueSize),
+	}
+
+	p.wg.Add(workers)
+	for range workers {
+		go p.worker()
+	}
+	return p, nil
+}
+
+// Submit добавляет задачу в очередь. Не блокируется: если очередь полна,
+// сразу возвращает ErrQueueFull. Безопасен для вызова из разных горутин.
+func (p *Pool) Submit(t Task) error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.closed {
+		return ErrClosed
+	}
+
+	select {
+	case p.queue <- t:
+		return nil
+	default:
+		return ErrQueueFull
+	}
+}
+
+// Close запрещает добавление новых задач и блокируется, пока не будут
+// выполнены все уже принятые задачи. Повторный вызов безопасен.
+func (p *Pool) Close() {
+	p.mu.Lock()
+	if !p.closed {
+		p.closed = true
+		close(p.queue) // воркеры дочитают буфер и выйдут из range
+	}
+	p.mu.Unlock()
+	p.wg.Wait()
+}
+
+func (p *Pool) worker() {
+	defer p.wg.Done()
+	for t := range p.queue {
+		p.run(t)
+	}
+}
+
+// run изолирует панику в задаче, чтобы она не уронила воркер и весь процесс.
+func (p *Pool) run(t Task) {
+	defer func() { _ = recover() }()
+	t.Do()
+}
+
+// TESTING
+
+type TaskFunc func()
+
+func (f TaskFunc) Do() { f() }
+
+func main() {
+	p, _ := NewTaskPool(100, 30)
+
+	for i := range 150 {
+		d := rand.N(time.Duration(i+1) * time.Millisecond)
+		if err := p.Submit(TaskFunc(func() { time.Sleep(d) })); err != nil {
+			fmt.Println("error occured: ", err)
+		}
+	}
+
+	p.Close()
 }
 ```
 
